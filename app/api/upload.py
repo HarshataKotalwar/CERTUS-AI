@@ -1,7 +1,9 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from app.services.pdf_service import extract_pdf_text
+from app.services.document_service import save_document
 import os
 import shutil
+
 
 router = APIRouter()
 
@@ -26,6 +28,7 @@ async def upload_pdf(file: UploadFile = File(...)):
         shutil.copyfileobj(file.file, buffer)
 
     pdf_data = extract_pdf_text(file_path)
+    save_document(pdf_data["text"])
 
     return {
     "filename": file.filename,

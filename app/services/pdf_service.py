@@ -30,10 +30,10 @@ def extract_pdf_text(file_path: str):
         pdf_document.close()
 
         return {
-            "pages": total_pages,
-            "characters": total_characters,
-            "text": extracted_text
-        }
+    "pages": total_pages,
+    "characters": total_characters,
+    "text": extracted_text
+}
 
     except Exception as e:
         raise Exception(f"Error processing PDF: {str(e)}")
