@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CERTUS AI · Document Intelligence Platform</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="app">
+
+    <aside class="sidebar" aria-label="Document upload">
+
+        <div class="brand">
+            <div class="brand-icon" aria-hidden="true">C</div>
+            <div>
+                <div class="brand-name">CERTUS AI</div>
+                <div class="brand-subtitle">Document Intelligence</div>
+            </div>
+        </div>
+
+        <div class="sidebar-section">
+            <div class="section-label" id="uploadSectionLabel">DOCUMENT</div>
+
+            <div
+                id="uploadDropzone"
+                class="upload-card"
+                tabindex="0"
+                role="button"
+                aria-labelledby="uploadSectionLabel uploadTitle"
+            >
+                <div class="upload-icon" aria-hidden="true">↑</div>
+                <div class="upload-text">
+                    <div class="upload-title" id="uploadTitle">Upload PDF</div>
+                    <div class="upload-description">
+                        Click or drag a PDF here. Maximum size 10 MB.
+                    </div>
+                </div>
+            </div>
+
+            <input
+                type="file"
+                id="pdfInput"
+                accept=".pdf,application/pdf"
+                hidden
+            >
+
+            <div
+                id="selectedFile"
+                class="selected-file"
+                aria-live="polite"
+            ></div>
+
+            <button
+                id="uploadButton"
+                class="upload-button"
+                type="button"
+            >
+                Upload Document
+            </button>
+
+            <div
+                id="uploadStatus"
+                class="upload-status"
+                role="status"
+                aria-live="polite"
+            >
+                Select a PDF to begin.
+            </div>
+        </div>
+
+        <div class="sidebar-section current-section">
+            <div class="section-label">CURRENT DOCUMENT</div>
+
+            <div
+                id="currentDocumentCard"
+                class="document-card empty"
+            >
+                <div class="document-icon" aria-hidden="true">PDF</div>
+                <div class="document-info">
+                    <div id="documentName" class="document-name">
+                        No document uploaded
+                    </div>
+                    <div id="documentMeta" class="document-meta">
+                        Upload a PDF to start
+                    </div>
+                </div>
+            </div>
+
+            <button
+                id="resetDocumentButton"
+                class="reset-button"
+                type="button"
+                hidden
+            >
+                Upload New Document
+            </button>
+        </div>
+
+        <div class="sidebar-footer">
+            <div class="status-dot" aria-hidden="true"></div>
+            <span>CERTUS AI Backend</span>
+        </div>
+
+    </aside>
+
+    <main class="main">
+
+        <header class="header">
+            <div>
+                <h1>Document Assistant</h1>
+                <p>Ask questions grounded in your uploaded document</p>
+            </div>
+
+            <div
+                id="groundedStatus"
+                class="grounded-status inactive"
+            >
+                <span class="lock" aria-hidden="true">🔒</span>
+                <span id="groundedStatusText">No document loaded</span>
+            </div>
+        </header>
+
+        <section
+            id="chatMessages"
+            class="chat"
+            aria-label="Conversation"
+        >
+            <div class="welcome" id="welcomeState">
+                <div class="welcome-icon" aria-hidden="true">✦</div>
+                <h2>CERTUS AI</h2>
+                <p class="welcome-kicker">Document Intelligence Platform</p>
+                <p>
+                    Upload a PDF and ask questions grounded in its contents.
+                </p>
+                <button
+                    type="button"
+                    class="welcome-cta"
+                    id="welcomeUploadButton"
+                >
+                    Upload a PDF
+                </button>
+                <div class="suggestions">
+                    <button type="button" data-suggestion="What is this document about?">
+                        What is this document about?
+                    </button>
+                    <button type="button" data-suggestion="What are the main topics?">
+                        What are the main topics?
+                    </button>
+                    <button type="button" data-suggestion="Summarize the key points.">
+                        Summarize the key points.
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <div class="input-area">
+            <p id="chatHint" class="chat-hint" role="status" aria-live="polite"></p>
+
+            <div class="input-container">
+                <label class="input-label" for="questionInput">
+                    Question
+                </label>
+                <textarea
+                    id="questionInput"
+                    placeholder="Ask a question about your document..."
+                    rows="1"
+                    disabled
+                ></textarea>
+                <button
+                    id="sendButton"
+                    class="send-button"
+                    type="button"
+                    aria-label="Send question"
+                    disabled
+                >
+                    Send
+                </button>
+            </div>
+
+            <div class="input-hint">
+                CERTUS AI answers using information retrieved
+                from your uploaded document.
+            </div>
+        </div>
+
+    </main>
+
+</div>
+
+<script src="script.js"></script>
+
+</body>
+
+</html>
