@@ -1,14 +1,18 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
 
-from app.services.pdf_service import extract_pdf_text
+from app.services.pdf_service import extract_pdf_text, PDFExtractionError
 from app.services.chunk_service import chunk_text
 from app.services.embedding_service import create_embedding
 from app.services.vector_service import add_chunks
+from app.config.settings import UPLOAD_FOLDER, MAX_PDF_SIZE_BYTES
 
 import os
 import uuid
+import logging
 from pathlib import Path
 
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -16,10 +20,6 @@ router = APIRouter()
 # --------------------------------------------------
 # UPLOAD FOLDER
 # --------------------------------------------------
-
-UPLOAD_FOLDER = "data"
-
-MAX_PDF_SIZE_BYTES = 10 * 1024 * 1024
 
 os.makedirs(
     UPLOAD_FOLDER,
@@ -111,149 +111,171 @@ async def upload_pdf(
         raise
 
 
-    # --------------------------------------------------
-    # EXTRACT PDF TEXT
-    # --------------------------------------------------
+    processing_succeeded = False
 
-    pdf_data = extract_pdf_text(
-        file_path
-    )
+    try:
 
-    text = pdf_data["text"]
+        # --------------------------------------------------
+        # EXTRACT PDF TEXT
+        # --------------------------------------------------
 
-
-    # --------------------------------------------------
-    # CHECK TEXT
-    # --------------------------------------------------
-
-    if not text.strip():
-
-        raise HTTPException(
-            status_code=400,
-            detail="No readable text found in the PDF."
-        )
-
-
-    # --------------------------------------------------
-    # CREATE CHUNKS
-    # --------------------------------------------------
-
-    chunks = chunk_text(
-        text
-    )
-
-
-    if not chunks:
-
-        raise HTTPException(
-            status_code=400,
-            detail="Unable to create document chunks."
-        )
-
-
-    # --------------------------------------------------
-    # NORMALIZE CHUNKS
-    # --------------------------------------------------
-
-    clean_chunks = []
-
-    for chunk in chunks:
-
-        if isinstance(chunk, dict):
-
-            chunk_text_value = chunk.get(
-                "text",
-                ""
+        try:
+            pdf_data = extract_pdf_text(
+                file_path
+            )
+        except PDFExtractionError:
+            logger.exception("PDF extraction failed.")
+            raise HTTPException(
+                status_code=400,
+                detail="Failed to extract text from the PDF."
             )
 
-        else:
+        text = pdf_data["text"]
 
-            chunk_text_value = str(
+
+        # --------------------------------------------------
+        # CHECK TEXT
+        # --------------------------------------------------
+
+        if not text.strip():
+
+            raise HTTPException(
+                status_code=400,
+                detail="No readable text found in the PDF."
+            )
+
+
+        # --------------------------------------------------
+        # CREATE CHUNKS
+        # --------------------------------------------------
+
+        chunks = chunk_text(
+            text
+        )
+
+
+        if not chunks:
+
+            raise HTTPException(
+                status_code=400,
+                detail="Unable to create document chunks."
+            )
+
+
+        # --------------------------------------------------
+        # NORMALIZE CHUNKS
+        # --------------------------------------------------
+
+        clean_chunks = []
+
+        for chunk in chunks:
+
+            if isinstance(chunk, dict):
+
+                chunk_text_value = chunk.get(
+                    "text",
+                    ""
+                )
+
+            else:
+
+                chunk_text_value = str(
+                    chunk
+                )
+
+
+            if chunk_text_value.strip():
+
+                clean_chunks.append(
+                    chunk_text_value
+                )
+
+
+        if not clean_chunks:
+
+            raise HTTPException(
+                status_code=400,
+                detail="Unable to extract valid document chunks."
+            )
+
+
+        # --------------------------------------------------
+        # CREATE EMBEDDINGS
+        # --------------------------------------------------
+
+        embeddings = []
+
+        for chunk in clean_chunks:
+
+            embedding = create_embedding(
                 chunk
             )
 
-
-        if chunk_text_value.strip():
-
-            clean_chunks.append(
-                chunk_text_value
+            embeddings.append(
+                embedding
             )
 
 
-    if not clean_chunks:
+        # --------------------------------------------------
+        # CREATE METADATA
+        # --------------------------------------------------
 
-        raise HTTPException(
-            status_code=400,
-            detail="Unable to extract valid document chunks."
+        metadatas = []
+
+        for index in range(
+            len(clean_chunks)
+        ):
+
+            metadatas.append({
+
+                "document_id": document_id,
+
+                "document": file.filename,
+
+                "chunk": index + 1
+
+            })
+
+
+        # --------------------------------------------------
+        # STORE IN CHROMADB
+        # --------------------------------------------------
+
+        add_chunks(
+            clean_chunks,
+            embeddings,
+            metadatas
         )
 
 
-    # --------------------------------------------------
-    # CREATE EMBEDDINGS
-    # --------------------------------------------------
-
-    embeddings = []
-
-    for chunk in clean_chunks:
-
-        embedding = create_embedding(
-            chunk
-        )
-
-        embeddings.append(
-            embedding
-        )
+        processing_succeeded = True
 
 
-    # --------------------------------------------------
-    # CREATE METADATA
-    # --------------------------------------------------
+        # --------------------------------------------------
+        # RESPONSE
+        # --------------------------------------------------
 
-    metadatas = []
-
-    for index in range(
-        len(clean_chunks)
-    ):
-
-        metadatas.append({
+        return {
 
             "document_id": document_id,
 
-            "document": file.filename,
+            "filename": file.filename,
 
-            "chunk": index + 1
+            "pages": pdf_data["pages"],
 
-        })
+            "characters": pdf_data["characters"],
 
+            "chunks": len(clean_chunks),
 
-    # --------------------------------------------------
-    # STORE IN CHROMADB
-    # --------------------------------------------------
+            "message":
+                "PDF uploaded, processed, embedded and indexed successfully!"
 
-    add_chunks(
-        clean_chunks,
-        embeddings,
-        metadatas
-    )
+        }
 
+    finally:
 
-    # --------------------------------------------------
-    # RESPONSE
-    # --------------------------------------------------
-
-    return {
-
-        "document_id": document_id,
-
-        "filename": file.filename,
-
-        "pages": pdf_data["pages"],
-
-        "characters": pdf_data["characters"],
-
-        "chunks": len(clean_chunks),
-
-        "message":
-            "PDF uploaded, processed, embedded and indexed successfully!"
-
-    }
+        if (
+            not processing_succeeded
+            and os.path.exists(file_path)
+        ):
+            os.remove(file_path)

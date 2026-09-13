@@ -1,7 +1,14 @@
-import fitz  # PyMuPDF
+import logging
+import pymupdf
+
+logger = logging.getLogger(__name__)
 
 
-def extract_pdf_text(file_path: str):
+class PDFExtractionError(Exception):
+    """Raised when PDF text cannot be extracted."""
+
+
+def extract_pdf_text(file_path: str) -> dict[str, int | str]:
     """
     Extracts text and metadata from a PDF.
 
@@ -14,26 +21,27 @@ def extract_pdf_text(file_path: str):
     """
 
     try:
-        # Open PDF
-        pdf_document = fitz.open(file_path)
+        with pymupdf.open(file_path) as pdf_document:
 
-        extracted_text = ""
+            extracted_text = ""
 
-        # Read every page
-        for page in pdf_document:
-            extracted_text += page.get_text()
+            for page in pdf_document:
+                extracted_text += page.get_text()
 
-        # Metadata
-        total_pages = len(pdf_document)
-        total_characters = len(extracted_text)
+            total_pages = len(pdf_document)
+            total_characters = len(extracted_text)
 
-        pdf_document.close()
+            return {
+                "pages": total_pages,
+                "characters": total_characters,
+                "text": extracted_text
+            }
 
-        return {
-    "pages": total_pages,
-    "characters": total_characters,
-    "text": extracted_text
-}
+    except PDFExtractionError:
+        raise
 
-    except Exception as e:
-        raise Exception(f"Error processing PDF: {str(e)}")
+    except Exception:
+        logger.exception("Failed to extract text from the PDF.")
+        raise PDFExtractionError(
+            "Failed to extract text from the PDF."
+        )

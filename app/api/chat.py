@@ -210,10 +210,9 @@ async def chat(request: ChatRequest):
 
     sources = []
 
-    for metadata in metadatas:
+    for index, metadata in enumerate(metadatas):
 
-        sources.append({
-
+        source = {
             "document":
                 metadata.get(
                     "document"
@@ -223,8 +222,12 @@ async def chat(request: ChatRequest):
                 metadata.get(
                     "chunk"
                 )
+        }
 
-        })
+        if index < len(distances):
+            source["distance"] = distances[index]
+
+        sources.append(source)
 
 
     # --------------------------------------------------
