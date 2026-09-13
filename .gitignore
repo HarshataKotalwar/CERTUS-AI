@@ -1,8 +1,11 @@
 # Ignore virtual environment
 venv/
+.venv/
 
 # Ignore environment variables
 .env
+.env.*
+!.env.example
 
 # Python cache
 __pycache__/
@@ -16,3 +19,16 @@ __pycache__/
 
 # VS Code settings
 .vscode/
+
+# JetBrains IDEs
+.idea/
+
+# ChromaDB data
+data/chroma/
+chroma_db/
+
+# Uploaded documents
+data/
+
+# Logs
+*.log
